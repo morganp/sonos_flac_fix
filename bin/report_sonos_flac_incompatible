@@ -1,0 +1,79 @@
+#!/usr/bin/env ruby
+#
+# Search through music folder checking flac files are Sonos compatible
+# 16 bit depth (or less) with 48kHz (or less) sample rate
+#
+## Requires soxi (part of sox) and the soxi-wrapper gem
+#
+# brew install sox --with-lame --with-flac --with-libvorbis
+# gem install soxi-wrapper
+
+require "soxi/wrapper"
+require 'pp'
+
+## KNOWN ISSUES
+#
+
+MUSIC_FOLDER = ARGV[0]
+# expects MUSIC/FOLDER/ARTIST/YEAR-ALBUM/TRACKS
+
+if MUSIC_FOLDER.nil?
+  puts "Usage: \n   #{__FILE__} path/to/music"
+  exit(-1)
+end
+
+
+## All files below 
+files = Dir[ File.join(MUSIC_FOLDER, '**', '*.flac') ].reject { |p| File.directory? p }
+#files = Dir.glob( File.join(MUSIC_FOLDER, '**', '*') )
+#pp files
+
+# Empty Array
+noncompatible_files_both  = []
+noncompatible_files_depth = []
+noncompatible_files_rate  = []
+
+files.each do |file|
+  meta = Soxi::Wrapper::File.new( "\"#{file}\"" )
+
+  bit_depth_too_large  = (meta.bits_per_sample > 16)
+  sample_rate_too_high = (meta.samplerate.to_i > 48000)
+
+  if (bit_depth_too_large and sample_rate_too_high )
+    noncompatible_files_both << file
+  end
+  if (bit_depth_too_large and not sample_rate_too_high )
+    noncompatible_files_depth << file
+  end
+  if (not bit_depth_too_large and sample_rate_too_high )
+    noncompatible_files_rate << file
+  end
+
+
+  
+end
+
+puts "Files Not SONOS compatible : Sample Rate and Depth "
+pp noncompatible_files_both
+
+puts
+puts "Files Not SONOS compatible : Depth "
+pp noncompatible_files_depth
+
+puts
+puts "Files Not SONOS compatible : Sample Rate "
+pp noncompatible_files_rate
+
+
+#file = Soxi::Wrapper::File.new( "test.flac" )
+#puts file.filetype
+#puts file.samplerate
+#puts file.channels
+#puts file.samples
+#puts file.duration
+#puts file.seconds
+#puts file.bits_per_sample
+#puts file.average_bitrate
+#puts file.encoding
+#puts file.comments
+
